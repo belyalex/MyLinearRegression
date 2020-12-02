@@ -1,9 +1,10 @@
 package org.apache.spark.ml.made
 
-import com.google.common.io.Files
-import org.apache.spark.ml.{Pipeline, PipelineModel}
+import java.io.File
+
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.VectorAssembler
+import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql.types.{DoubleType, StructType}
 import org.apache.spark.sql.{DataFrame, SQLContext, SparkSession}
 import org.scalatest.flatspec._
@@ -62,7 +63,7 @@ class MyLinearRegressionTest extends AnyFlatSpec with should.Matchers {
     val r2_test = evaluator.evaluate(dfp_test)
     println(s"Валидация R2 score train: $r2_train, test: $r2_test")
     r2_train should be(0.52 +- 0.005)
-    r2_test should be(0.49 +- 0.05)
+    r2_test should be(0.49 +- 0.005)
   }
 
   "Model" should "work" in {
@@ -76,7 +77,7 @@ class MyLinearRegressionTest extends AnyFlatSpec with should.Matchers {
     check_model(rm, df_train, df_test)
   }
 
-  "Model" should "work after re-read" in {
+  "Model" should "work after save-load" in {
     val pipeline = new Pipeline().setStages(Array(
       new MyLinearRegression()
         .setFeaturesCol("features")
@@ -85,10 +86,11 @@ class MyLinearRegressionTest extends AnyFlatSpec with should.Matchers {
     ))
 
     val model = pipeline.fit(df_train)
-    val tmpFolder = Files.createTempDir()
-    model.write.overwrite().save(tmpFolder.getAbsolutePath)
+    val modelFolder = new File("model")
+    modelFolder.mkdir
+    model.write.overwrite().save(modelFolder.getAbsolutePath)
 
-    val reRead = PipelineModel.load(tmpFolder.getAbsolutePath)
+    val reRead = PipelineModel.load(modelFolder.getAbsolutePath)
 
     check_model(reRead.stages(0).asInstanceOf[MyLinearRegressionModel], df_train, df_test)
   }
